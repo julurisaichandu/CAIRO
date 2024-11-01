@@ -1,3 +1,4 @@
+import json
 from src.openai_api import OpenAIApi
 from src.utils import parse_llm_response
 
@@ -103,9 +104,23 @@ Remember to focus solely on generating customer personas based on the given info
 """
 
 
-def generate_hypothesis(company_details):
+def generate_hypothesis(company_details, api_data = None):
+    form_data_json = company_details
+
+    # Check if it's a string and parse it to a JSON object. Or else the prompt gives error.
+    if isinstance(form_data_json, str):
+        try:
+            form_data_json = json.loads(form_data_json)
+        except json.JSONDecodeError as e:
+            print("Error decoding JSON:", e)
+            form_data_json = {}
+    
+    combined_details = {**form_data_json, **(api_data or {})}
+
+    # Convert combined details to a JSON string to embed in the prompt
+    combined_details_json = json.dumps(combined_details)
     messages = [{'role': 'system', 'content': system_prompt},
-        {"role": "user", "content": prompt.format(company_details=company_details)}]
+        {"role": "user", "content": prompt.format(company_details=combined_details_json)}]
 
     hypothesis = None
     print("Inside generate hypithesis")

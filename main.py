@@ -1,6 +1,8 @@
 import json
+import os
 import streamlit as st
 
+from src.pdl_api import enrich_profiles
 from src.hypothesis_generator import generate_hypothesis
 from src.openai_api import OpenAIApi
 from src.prompts import hypotheis_update_prompt
@@ -11,7 +13,6 @@ from src.deck_generation import process_multiple_jsons
 import streamlit.components.v1 as components
 
 import pandas as pd
-import os
 
 st.session_state.df = pd.read_csv('dev_tools_investors_preseed.xlsx - Sheet1.csv')
 
@@ -19,7 +20,6 @@ if os.getenv("OPENAI_API_KEY"):
     print("OPENAI_API_KEY is set")
 else:
     print("OPENAI_API_KEY is not set")
-
 openai_api = OpenAIApi(os.getenv("OPENAI_API_KEY"))
 
 st.set_page_config(layout="wide")
@@ -54,6 +54,11 @@ with st.form("Get Company Information"):
         # market_digital = st.checkbox("Digital Product")
         # market_service = st.checkbox("Service")
         # main_message = st.text_area("Main Message")
+        uploaded_file = st.file_uploader("Upload lead list", type=["csv", "xlsx"])
+        
+
+            
+
     with col2:
         company_name = st.text_input("Company Name",placeholder="Company Name")
         company_description = st.text_area("Company Description",height=200)
@@ -64,6 +69,7 @@ with st.form("Get Company Information"):
         # customer_b2b2c = st.checkbox("B2B2C")
         # target_customer = st.text_area("Target Customer")
 
+        
     # TODO: Add a chat bot
 
     # Submit button
@@ -105,15 +111,32 @@ with st.form("Get Company Information"):
         }
 
         form_data_json = json.dumps(form_data)
-        print(form_data_json)
         if 'form_data_json' not in st.session_state:
             st.session_state.form_data = form_data
 
-        print("BEfore generating hypothesis")
+                # Check if a file is uploaded
+        
+        
+        if uploaded_file:
+            # For CSV files
+            if uploaded_file.name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
+            # For Excel files
+            elif uploaded_file.name.endswith(".xlsx"):
+                df = pd.read_excel(uploaded_file, engine='openpyxl')
 
+            # scrape lead list and
+            if 'website' in df.columns:
+                linkedin_profiles = df['website'].tolist()[:5]
+            if linkedin_profiles:
+                print(linkedin_profiles)
+                enriched_data = enrich_profiles(linkedin_profiles)
+                with open("my_pdl_enrichment.json", "w") as out:
+                    out.write(json.dumps(enriched_data) + "\n")
+        
         with st.spinner("Generating Hypotheses..."):
             print("Generating Hypotheses...")
-            hypothesis = generate_hypothesis(form_data_json)
+            hypothesis = generate_hypothesis(form_data_json, enriched_data)
             print("Hypothesis Generated")
 
         if hypothesis is None:
@@ -126,7 +149,8 @@ with st.form("Get Company Information"):
             st.session_state.conversation = []
 
 if 'hypothesis' in st.session_state:
-    st.write("Hypothesis:", st.session_state.hypothesis)
+    # commenting because its same as the below list of the personas
+    # st.write("Hypothesis:", st.session_state.hypothesis)
     # TODO: Better UI Display of Hypothesis
     i = 1
     for person in st.session_state.hypothesis:
