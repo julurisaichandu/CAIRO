@@ -127,7 +127,7 @@ with st.form("Get Company Information"):
 
             # scrape lead list and
             if 'website' in df.columns:
-                linkedin_profiles = df['website'].tolist()[:5]
+                linkedin_profiles = df['website'].tolist()
             if linkedin_profiles:
                 print(linkedin_profiles)
                 enriched_data = enrich_profiles(linkedin_profiles)
@@ -136,7 +136,7 @@ with st.form("Get Company Information"):
         
         with st.spinner("Generating Hypotheses..."):
             print("Generating Hypotheses...")
-            hypothesis = generate_hypothesis(form_data_json, enriched_data)
+            hypothesis = generate_hypothesis(form_data_json)
             print("Hypothesis Generated")
 
         if hypothesis is None:
